@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mama Care</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F7F4;--sf:#fff;--tx:#14231F;--mu:#556661;--pr:#0F5C4D;--on:#fff;--ac:#E8A317;--rd:#B3321B;--rb:#FBE9E5;--ln:#D5E1DB;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1815;--sf:#16251F;--tx:#E8F1ED;--mu:#9DB1AA;--pr:#4FC3A7;--on:#06201A;--ac:#F0B63A;--rd:#FF8A73;--rb:#3A1F1A;--ln:#27403A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1815;--sf:#16251F;--tx:#E8F1ED;--mu:#9DB1AA;--pr:#4FC3A7;--on:#06201A;--ac:#F0B63A;--rd:#FF8A73;--rb:#3A1F1A;--ln:#27403A;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 "Source Sans 3",system-ui,sans-serif;padding-bottom:84px}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0 0 .4em;line-height:1.15}
+h1{font-size:26px}h2{font-size:22px}h3{font-size:18px}
+main{max-width:640px;margin:0 auto;padding:16px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:16px;margin-bottom:14px}
+.hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.warn{border-left:4px solid var(--ac)}
+label{display:block;font-size:14px;color:var(--mu);margin:10px 0 4px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:16px;color:var(--tx);margin:0}
+.chk input{width:22px;height:22px;flex:none;margin-top:2px}
+input,select{width:100%;padding:10px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 16px;background:var(--pr);color:var(--on);cursor:pointer;margin:6px 6px 0 0}
+button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}
+:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.big{font-size:38px;font-weight:700;font-family:"Bricolage Grotesque",system-ui,sans-serif}
+.mu{color:var(--mu)}
+.alert{background:var(--rb);color:var(--rd);border-left:4px solid var(--rd);border-radius:8px;padding:10px 12px;margin:10px 0}
+.badge{background:var(--ac);color:#1b1300;border-radius:6px;padding:1px 7px;font-size:13px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--ln)}
+.row2{display:flex;gap:8px;margin-top:8px}.row2 button{margin:0;white-space:nowrap}
+.bub{padding:9px 12px;border-radius:12px;margin:6px 0;max-width:90%}
+.bub.me{background:var(--pr);color:var(--on);margin-left:auto}
+.bub.bot{background:var(--bg);border:1px solid var(--ln)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--sf);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;margin:0;background:none;color:var(--mu);border-radius:0;padding:14px 1px;font-size:11px}
+nav button.on{color:var(--pr);box-shadow:inset 0 3px var(--pr)}
+a.b{display:inline-block;margin:6px 6px 0 0;padding:9px 13px;border:1px solid var(--pr);border-radius:10px;color:var(--pr);font-weight:600;text-decoration:none;font-size:15px}.bub{white-space:pre-wrap}.bub small{opacity:.8}.row[role=button]{cursor:pointer}
+</style></head>
+<body><main id="app"></main><nav id="nav"></nav>
+<script>
+const $=s=>document.querySelector(s),D=864e5,now=()=>Date.now();
+const E=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+var TOK=null,USER=null;let S={p:null,w:[],bp:[],k:[],c:[],cpn:{}},tab="home",sym={},chat=[],kk=null,cc=null,err="",rc=false,DB=null,UID=null,PRO=false,asPro=true,un=[],cl=[],msgs=[],sel=null,started=false,tm=0,cerr="",busy=false;
+try{const r=localStorage.getItem("mc2");if(r)Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{S.t=now();if(USER)try{localStorage.setItem("mcs"+USER.id,JSON.stringify(S))}catch(e){}clearTimeout(tm);if(TOK)tm=setTimeout(()=>api("PUT","/state",{s:S}).catch(()=>{}),1200)};
+const L=()=>new Date(S.p.lmp+"T12:00"),fd=d=>new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+const calc=()=>{const days=Math.floor((now()-L())/D);return{days,w:Math.floor(days/7),d:days%7,edd:new Date(+L()+280*D),left:280-days,tri:days<91?0:days<189?1:2}};
+const bmi=()=>S.p.h&&S.p.w0?S.p.w0/Math.pow(S.p.h/100,2):NaN;
+const rng=()=>{const b=bmi();return b<18.5?[12.5,18,.51]:b<25?[11.5,16,.42]:b<30?[7,11.5,.28]:[5,9,.22]};
+const bpLv=x=>x.s>=160||x.d>=110?2:x.s>=140||x.d>=90?1:0;
+const F=[["name","Prénom","text"],["lmp","Date des dernières règles","date"],["edd","Date prévue d’accouchement (échographie, facultatif)","date"],["age","Âge","number"],["h","Taille (cm)","number"],["w0","Poids avant la grossesse (kg)","number"],["bg","Groupe sanguin et rhésus","sel"],["grav","Nombre de grossesses précédentes","number"],["place","Lieu d’accouchement prévu","text"],["ctcN","Personne à prévenir en urgence","text"],["ctcT","Téléphone de cette personne","tel"]];
+const R=[["twin","Grossesse multiple (jumeaux)"],["htn","Hypertension connue"],["dia","Diabète"],["ane","Anémie ou drépanocytose"],["cs","Césarienne précédente"],["mis","Fausse couche ou mort-né précédent"]];
+const BG=["","A+","A-","B+","B-","AB+","AB-","O+","O-"];
+const SZ={8:"une framboise",12:"un citron vert",16:"un avocat",20:"une banane",24:"un épi de maïs",28:"une aubergine",32:"un chou",36:"une papaye",40:"une pastèque"};
+const TIP=["Premier trimestre : prenez l’acide folique, mangez peu et souvent, reposez-vous. Prenez rendez-vous pour votre première visite avant 12 SA.","Deuxième trimestre : dormez chaque nuit sous moustiquaire, mangez des aliments riches en fer, marchez un peu chaque jour.","Troisième trimestre : préparez le sac de maternité et le transport, comptez les mouvements du bébé, repérez la maternité."];
+const CPN=[[12,"Première visite, idéalement avant 12 SA : tension, poids, bilan sanguin, dépistages, fer et acide folique."],[20,"Échographie morphologique entre 18 et 22 SA, vaccin antitétanique si besoin."],[26,"Tension, poids, hauteur utérine, prévention du paludisme."],[30,"Recherche d’anémie, croissance du bébé."],[34,"Position du bébé, préparation de l’accouchement."],[36,"Plan d’accouchement et transport."],[38,"Contrôle avant le terme."],[40,"Terme : suivi rapproché."]];
+const SG=["Saignement vaginal","Perte de liquide ou écoulement abondant","Convulsions ou perte de connaissance","Maux de tête forts avec vue trouble","Douleur forte au ventre","Fièvre ou frissons","Moins de mouvements du bébé","Gonflement brutal du visage ou des mains","Difficulté à respirer ou douleur à la poitrine","Vomissements sans arrêt","Contractions régulières avant 37 SA","Jambe gonflée, rouge et douloureuse d’un seul côté"];
+const SC=["Brûlures en urinant","Démangeaisons ou pertes inhabituelles","Nausées fortes, mais je garde les liquides","Maux de dos persistants","Fatigue inhabituelle ou pâleur"];
+const KB=[[/saign/,"Tout saignement vaginal pendant la grossesse est une urgence : rendez-vous tout de suite à la maternité."],
+[/nause|vomi/,"Les nausées sont fréquentes au 1er trimestre. Mangez peu et souvent, buvez par petites gorgées, évitez les odeurs fortes. Si vous ne gardez rien ou perdez du poids, consultez vite."],
+[/paludisme|moustique|palu/,"Dormez chaque nuit sous moustiquaire imprégnée. Un traitement préventif (TPI) est proposé en consultation prénatale : demandez-le à votre sage-femme. Une fièvre impose de consulter le jour même."],
+[/\bfer\b|anemi|fatigue|pale/,"Le fer et l’acide folique sont recommandés pendant la grossesse. Mangez feuilles vertes, haricots, poisson et viande bien cuits, et évitez le thé juste après le repas. Fatigue intense ou pâleur : demandez un dosage de l’hémoglobine."],
+[/manger|aliment|nourriture|regime|repas/,"Variez : féculents, légumes, fruits, protéines (poisson, œufs, haricots, viande bien cuits). Évitez le lait cru, les viandes ou poissons crus, et l’alcool. Buvez de l’eau propre."],
+[/alcool|tabac|cigarette|drogue/,"Aucun alcool ni tabac n’est sans risque pendant la grossesse. Parlez-en à votre sage-femme pour être aidée."],
+[/medicament|paracetamol|tisane|plante/,"Ne prenez aucun médicament ni plante sans l’avis d’un professionnel de santé. Une fièvre doit toujours être signalée."],
+[/mouvement|bouge|\bcoups?\b/,"À partir de 28 SA environ, comptez les mouvements dans l’onglet Suivi. Moins de 10 mouvements en 2 heures, ou un net changement : allez à la maternité sans attendre."],
+[/contraction|travail|accouch|douleur/,"Règle 5-1-1 : contractions toutes les 5 minutes, d’une minute, pendant une heure : partez à la maternité. Avant 37 SA, des contractions régulières imposent de consulter tout de suite. Perte de liquide ou saignement : partez aussitôt."],
+[/tension|\bhta\b|eclampsie|oedeme|gonfl|mal de tete|maux de tete/,"Une tension à 140/90 ou plus, des maux de tête forts, une vue trouble ou un gonflement du visage et des mains peuvent signaler une pré-éclampsie : consultez le jour même."],
+[/sport|marche|exercice|voyage/,"La marche, les étirements doux et la natation sont conseillés si votre sage-femme ne les interdit pas. Évitez les sports à risque de chute ou de choc."],
+[/sac|valise|maternite/,"Pour la maternité : carnet de santé, pièce d’identité, vêtements amples, serviettes, layette, couches, eau, en-cas, chargeur de téléphone."],
+[/allait|sein/,"Mettez le bébé au sein dans l’heure qui suit la naissance et allaitez exclusivement jusqu’à 6 mois."]];
+const risks=()=>{const p=S.p,r=R.filter(([k])=>p[k]).map(x=>x[1]),b=bmi();if(p.age>=35)r.push("Âge de 35 ans ou plus");if(p.age&&p.age<18)r.push("Âge de moins de 18 ans");if(b<18.5)r.push("Poids bas avant la grossesse");if(b>=30)r.push("Obésité avant la grossesse");if(p.grav>=5)r.push("5 grossesses ou plus");return r};
+const V={};
+V.home=()=>{const c=calc();if(c.days<0||c.days>300)return`<div class="card"><h2>Dates à vérifier</h2><p>La date saisie ne correspond pas à une grossesse en cours. Corrigez-la dans l’onglet Profil.</p></div>`;
+const C=439.8,k=Object.keys(SZ).filter(x=>x<=c.w).pop(),bp=S.bp.at(-1),rk=risks(),nx=CPN.find(x=>!S.cpn[x[0]]);
+return`<div class="card hero"><svg viewBox="0 0 160 160" width="150" height="150" role="img" aria-label="Progression de la grossesse"><circle cx="80" cy="80" r="70" fill="none" stroke="var(--ln)" stroke-width="12"/><circle cx="80" cy="80" r="70" fill="none" stroke="var(--pr)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-c.days/280)}" transform="rotate(-90 80 80)"/><text x="80" y="84" text-anchor="middle" font-size="36" font-weight="700" fill="var(--tx)">${c.w}</text><text x="80" y="106" text-anchor="middle" font-size="13" fill="var(--mu)">semaines</text></svg><div><h1>${E(S.p.name||"Maman")}</h1><p>${c.w} SA + ${c.d} j, ${["1er","2e","3e"][c.tri]} trimestre.<br>Il reste environ ${Math.max(c.left,0)} jours.</p><p class="mu">Accouchement prévu vers le ${fd(c.edd)}.${k?` Votre bébé a à peu près la taille d’${SZ[k].replace(/^(un|une) /,"")==SZ[k]?SZ[k]:SZ[k]}.`:""}</p></div></div>
+${bp&&bpLv(bp)?`<div class="alert"><b>Dernière tension : ${bp.s}/${bp.d}.</b> ${bpLv(bp)>1?"Valeur très élevée : allez à la maternité aujourd’hui.":"Valeur élevée : refaites la mesure au repos et contactez votre sage-femme dans la journée."}</div>`:""}
+${rk.length?`<div class="card warn"><h3>Grossesse à surveiller</h3><p>${rk.map(E).join(", ")}.</p><p class="mu">Faites-vous suivre dans une structure capable de gérer les complications.</p></div>`:""}
+${nx?`<div class="card"><h3>Prochaine visite</h3><p>${nx[0]} SA, vers le ${fd(+L()+nx[0]*7*D)}.</p><p class="mu">${nx[1]}</p></div>`:""}
+<div class="card"><h3>Conseil du trimestre</h3><p>${TIP[c.tri]}</p></div>
+<p class="mu">Mama Care informe et accompagne. Il ne remplace pas une sage-femme ou un médecin.</p>`};
+V.track=()=>{const r=rng(),ok=isFinite(r[0]),c=calc(),lw=S.w.at(-1),g=lw?lw.k-S.p.w0:0,ex=1.25*Math.min(c.w,13)/13+Math.max(0,c.w-13)*r[2];
+const wm=!ok||!lw?"":g<ex-1.5?"Prise de poids sous le repère : parlez-en à votre sage-femme.":g>ex+1.5?"Prise de poids au-dessus du repère : parlez-en à votre sage-femme.":"Prise de poids dans le repère.";
+const cs=S.c.slice(-5).reverse().map((x,i,a)=>{const n=a[i+1];return`<div class="row"><span>${new Date(x.s).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}, durée ${x.d} s</span><span class="mu">${n?"intervalle "+Math.round((x.s-n.s)/6e4*10)/10+" min":""}</span></div>`}).join("");
+return`<div class="card"><h3>Poids</h3>${ok?`<p class="mu">Objectif total : ${r[0]} à ${r[1]} kg, selon votre poids avant grossesse.</p>`:`<p class="mu">Renseignez taille et poids dans le profil pour obtenir un repère.</p>`}
+<div class="row2"><input id="wk" type="number" step="0.1" inputmode="decimal" placeholder="Poids du jour (kg)" aria-label="Poids du jour en kilogrammes"><button onclick="addW()">Ajouter</button></div>
+${lw&&ok?`<p>Prise de poids : <b>${g.toFixed(1)} kg</b>. ${wm}</p>`:""}${S.w.slice(-5).reverse().map(x=>`<div class="row"><span>${fd(x.t)}</span><b>${x.k} kg</b></div>`).join("")}</div>
+<div class="card"><h3>Tension</h3><div class="row2"><input id="bs" type="number" inputmode="numeric" placeholder="Haute (ex. 120)" aria-label="Tension haute"><input id="bd" type="number" inputmode="numeric" placeholder="Basse (ex. 80)" aria-label="Tension basse"><button onclick="addBP()">Ajouter</button></div>
+${S.bp.slice(-5).reverse().map(x=>`<div class="row"><span>${fd(x.t)}, ${x.s}/${x.d}</span><b>${["Normale","Élevée","Très élevée"][bpLv(x)]}</b></div>`).join("")}</div>
+<div class="card"><h3>Mouvements du bébé</h3><p class="mu">Après 28 SA, notez le temps pour sentir 10 mouvements, au repos, allongée sur le côté.</p><div class="big">${kk?kk.n:0}/10</div><div id="kt" class="mu"></div><button onclick="kick()">Le bébé a bougé</button><button class="g" onclick="kk=null;render()">Recommencer</button>
+${S.k.slice(-3).reverse().map(x=>`<div class="row"><span>${fd(x.t)}</span><span>10 mouvements en ${x.m} min</span></div>`).join("")}</div>
+<div class="card"><h3>Contractions</h3><div id="ct" class="mu"></div><button onclick="ctog()">${cc?"Fin de la contraction":"Début de la contraction"}</button><button class="g" onclick="S.c=[];cc=null;save();render()">Effacer</button>${ceval(c.w)}${cs}</div>`};
+function ceval(w){const a=S.c.slice(-4);if(a.length<4)return"";const iv=a.slice(1).map((x,i)=>(x.s-a[i].s)/1e3),mi=iv.reduce((s,x)=>s+x,0)/iv.length,md=a.reduce((s,x)=>s+x.d,0)/a.length;
+if(mi<=300&&md>=60)return`<div class="alert">Rythme 5-1-1 atteint : partez pour la maternité.</div>`;
+if(mi<=600&&w<37)return`<div class="alert">Contractions régulières avant 37 SA : contactez la maternité tout de suite.</div>`;return""}
+function addW(){const v=parseFloat($("#wk").value);if(!v)return;S.w.push({t:now(),k:v});save();render()}
+function addBP(){const s=parseInt($("#bs").value),d=parseInt($("#bd").value);if(!s||!d)return;S.bp.push({t:now(),s,d});save();render()}
+function kick(){if(!kk)kk={n:0,t:now()};if(kk.n<10){kk.n++;if(kk.n==10){kk.done=now();S.k.push({t:now(),m:Math.round((kk.done-kk.t)/6e4)});S.k=S.k.slice(-10);save()}}render()}
+function ctog(){if(cc){S.c.push({s:cc,d:Math.round((now()-cc)/1e3)});S.c=S.c.slice(-20);save();cc=null}else cc=now();render()}
+V.cal=()=>`<div class="card"><h2>Visites prénatales</h2><p class="mu">Huit contacts recommandés par l’OMS. Cochez ceux que vous avez faits.</p>${CPN.map(([w,t])=>{const dt=+L()+w*7*D,late=!S.cpn[w]&&dt<now();return`<label class="chk"><input type="checkbox" ${S.cpn[w]?"checked":""} onchange="S.cpn[${w}]=this.checked;save();render()"><span><b>${w} SA, vers le ${fd(dt)}</b>${late?` <span class="badge">à rattraper</span>`:""}<br><span class="mu">${t}</span></span></label>`}).join("")}</div>`;
+V.sos=()=>`<div class="card"><h2>Signes d’alerte</h2><p class="mu">Cochez ce que vous ressentez en ce moment.</p><h3>Danger</h3>${SG.map((t,i)=>`<label class="chk"><input type="checkbox" ${sym["d"+i]?"checked":""} onchange="sym['d${i}']=this.checked;sosRes()">${t}</label>`).join("")}<h3 style="margin-top:14px">À signaler</h3>${SC.map((t,i)=>`<label class="chk"><input type="checkbox" ${sym["c"+i]?"checked":""} onchange="sym['c${i}']=this.checked;sosRes()">${t}</label>`).join("")}<div id="sr"></div></div>`;
+function sosRes(){const d=SG.some((_,i)=>sym["d"+i]),c=SC.some((_,i)=>sym["c"+i]);$("#sr").innerHTML=d?`<div class="alert"><b>Signe de danger.</b> Rendez-vous tout de suite à la maternité ou au centre de santé le plus proche, sans attendre. Prévenez ${E(S.p.ctcN||"un proche")}${S.p.ctcT?" au "+E(S.p.ctcT):""}.</div>`:c?`<div class="card warn">Consultez une sage-femme ou un médecin dans les 24 heures.</div>`:`<p class="mu">Aucun signe coché.</p>`}
+V.ask=()=>`<div class="card"><h2>Assistante Mama Care</h2><p class="mu">Réponses générales, sans remplacer un professionnel de santé.</p><div>${chat.map((m,i)=>`<div class="bub ${m.r}"${i==chat.length-1?' id="lm"':""}>${E(m.t)}</div>`).join("")||`<p class="mu">Posez une question : nausées, paludisme, alimentation, contractions…</p>`}</div><div class="row2"><input id="q" placeholder="Votre question" aria-label="Votre question" onkeydown="if(event.key==='Enter')ask()"><button onclick="ask()">Envoyer</button></div></div>`;
+function askOld(){const q=$("#q").value.trim();if(!q)return;const n=q.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),f=KB.find(([re])=>re.test(n));chat.push({r:"me",t:q},{r:"bot",t:f?f[1]:"Je n’ai pas de réponse fiable à cette question. Parlez-en à votre sage-femme ou à votre médecin. En cas de signe d’alarme, ouvrez l’onglet Alertes."});render();$("#q").focus()}
+V.me=()=>{const p=S.p||{};return`<div class="card"><h2>${S.p?"Votre profil":"Bienvenue sur Mama Care"}</h2><p class="mu">${acct()}</p>${err?`<div class="alert">${err}</div>`:""}${F.map(([k,l,t])=>`<label for="f_${k}">${l}</label>${t=="sel"?`<select id="f_${k}">${BG.map(b=>`<option ${p[k]==b?"selected":""}>${b}</option>`).join("")}</select>`:`<input id="f_${k}" type="${t}" value="${E(p[k])}" ${t=="number"?'inputmode="decimal" step="any"':""}>`}`).join("")}<h3 style="margin-top:16px">Antécédents et facteurs de risque</h3>${R.map(([k,l])=>`<label class="chk"><input type="checkbox" id="f_${k}" ${p[k]?"checked":""}>${l}</label>`).join("")}<button onclick="saveP()">Enregistrer</button></div>${S.p?`<div class="card"><h3>Mes données</h3><button class="g" onclick="copyS()">Résumé pour la consultation</button><button class="g" onclick="resetAll()">${rc?"Confirmer l’effacement":"Effacer mes données"}</button><p id="cm" class="mu" style="white-space:pre-wrap"></p></div>`:""}`};
+function saveP(){const p={};F.forEach(([k])=>p[k]=$("#f_"+k).value.trim());R.forEach(([k])=>p[k]=$("#f_"+k).checked);["age","h","w0","grav"].forEach(k=>p[k]=parseFloat(p[k])||0);
+if(p.edd)p.lmp=new Date(+new Date(p.edd+"T12:00")-280*D).toISOString().slice(0,10);
+if(!p.lmp){err="Indiquez la date des dernières règles ou la date prévue d’accouchement.";return render()}
+err="";S.p=p;save();tab="home";render();scrollTo(0,0)}
+function sumTxt(){const p=S.p,c=calc(),w=S.w.at(-1),b=S.bp.at(-1),t=[`Mama Care : ${p.name}`,`Âge gestationnel : ${c.w} SA + ${c.d} j (terme vers le ${fd(c.edd)})`,`Groupe sanguin : ${p.bg||"non renseigné"}`,`Facteurs de risque : ${risks().join(", ")||"aucun déclaré"}`,`Dernier poids : ${w?w.k+" kg":"non renseigné"}`,`Dernière tension : ${b?b.s+"/"+b.d:"non renseignée"}`,`Personne à prévenir : ${p.ctcN||"-"} ${p.ctcT||""}`].join("\n");
+return t}function copyS(){const t=sumTxt();$("#cm").textContent=t;try{navigator.clipboard.writeText(t)}catch(e){}}
+function resetAll(){if(!rc){rc=true;return render()}rc=false;S={p:null,w:[],bp:[],k:[],c:[],cpn:{}};save();render()}
+const T=[["home","Accueil"],["track","Suivi"],["rap","Rappels"],["sos","Alertes"],["ask","Aide"],["cons","Consulter"],["me","Profil"]];
+function renderOld(){if(!S.p)tab="me";$("#nav").innerHTML=T.map(([k,l])=>`<button class="${k==tab?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${l}</button>`).join("");$("#app").innerHTML=V[tab]();if(tab=="sos")sosRes()}
+setInterval(()=>{const e=$("#kt");if(e)e.textContent=!kk?"":kk.n>=10?"Objectif atteint en "+Math.floor((kk.done-kk.t)/6e4)+" min.":Math.floor((now()-kk.t)/6e4)>=120?"Moins de 10 mouvements en 2 h : rendez-vous à la maternité.":"Temps écoulé : "+Math.floor((now()-kk.t)/6e4)+" min";const x=$("#ct");if(x)x.textContent=cc?"En cours : "+Math.round((now()-cc)/1e3)+" s":""},1000);
+const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const FB="Je n’ai pas de réponse fiable à cette question. Parlez-en à votre sage-femme ou ouvrez l’onglet Consulter. En cas de signe d’alarme, ouvrez l’onglet Alertes.";
+const acct=()=>(DB?"Compte connecté : vos données sont synchronisées sur vos appareils.":"Mode local : vos données restent sur cet appareil.")+(PRO?" Rôle : professionnelle de santé.":"");
+async function ask(){const q=$("#q").value.trim();if(!q||busy)return;$("#q").value="";const n=norm(q),kb=KB.find(([re])=>re.test(n)),m={r:"bot",t:""},dg=/saign|convuls|perte de liquide|moins de mouvement/.test(n);chat.push({r:"me",t:q},m);busy=true;render();$("#q").focus();
+let sm=null;try{sm=await claude.use("sample")}catch(e){}
+if(!sm)m.t=kb?kb[1]:FB;else{try{const c=S.p?calc():null,ctx=c?`${c.w} semaines d’aménorrhée, ${["1er","2e","3e"][c.tri]} trimestre. Facteurs de risque : ${risks().join(", ")||"aucun"}.`:"non renseigné.",tr=chat.slice(-8,-2).map(x=>(x.r=="me"?"Utilisatrice : ":"Assistante : ")+x.t).join("\n");
+const r=await sm(`Tu es l’assistante de Mama Care, une application de suivi de grossesse pour des femmes en Afrique de l’Ouest. Réponds en français simple, en 5 phrases maximum, avec bienveillance. Tu donnes des informations générales, jamais de diagnostic ni de dose de médicament. Si la question évoque un signe de danger (saignement, convulsions, perte de liquide, maux de tête forts avec vue trouble, fièvre, moins de mouvements du bébé, douleur forte), dis d’aller tout de suite à la maternité. Sinon, rappelle de voir une sage-femme en cas de doute.\nContexte : ${ctx}\n${tr}\nQuestion : ${q}`,{cache:false,modelTier:"quick",onText:({text})=>{m.t=text;const e=$("#lm");if(e)e.textContent=text}});m.t=r.text||(kb?kb[1]:FB)}catch(e){m.t=kb?kb[1]:FB}}
+if(dg)m.t="Urgence possible : allez à la maternité sans attendre.\n"+m.t;busy=false;render()}
+const iso=()=>new Date().toISOString().slice(0,10),ymd=t=>new Date(t).toISOString().slice(0,10).replace(/-/g,""),tmf=t=>new Date(t).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const gl=(t,a,b,r,d)=>`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(t)}&dates=${a}/${b}&details=${encodeURIComponent(d||"")}&ctz=Africa/Porto-Novo${r?"&recur="+encodeURIComponent(r):""}`;
+const DAY=[["fer","Prendre le fer et l’acide folique"],["mou","Dormir sous moustiquaire ce soir"],["eau","Boire de l’eau propre toute la journée"],["mar","Marcher environ 20 minutes"]];
+V.rap=()=>{const c=calc();if(!S.dl||S.dl.d!=iso())S.dl={d:iso(),k:{}};const lb=S.bp.at(-1),lw=S.w.at(-1),td=[],d0=ymd(now());
+if(!lb||now()-lb.t>7*D)td.push("Mesurer votre tension cette semaine");
+if(!lw||now()-lw.t>14*D)td.push("Vous peser (tous les 15 jours)");
+CPN.forEach(([w])=>{if(!S.cpn[w]&&+L()+w*7*D<now())td.push("Prendre rendez-vous pour la visite des "+w+" SA")});
+if(c.w>=28)td.push("Compter les mouvements du bébé aujourd’hui");
+if(c.w>=36)td.push("Vérifier le sac de maternité et le transport");
+return`<div class="card"><h2>Aujourd’hui</h2>${DAY.map(([k,t])=>`<label class="chk"><input type="checkbox" ${S.dl.k[k]?"checked":""} onchange="S.dl.k['${k}']=this.checked;save()">${t}</label>`).join("")}</div><div class="card ${td.length?"warn":""}"><h3>À faire maintenant</h3>${td.length?td.map(t=>`<p>${t}</p>`).join(""):`<p class="mu">Tout est à jour.</p>`}</div><div class="card"><h3>Rappels dans votre agenda</h3><p class="mu">Ces liens ouvrent Google Agenda, qui vous alerte sur votre téléphone même quand l’application est fermée.</p><a class="b" target="_blank" rel="noopener" href="${gl("Fer et acide folique",d0+"T080000",d0+"T081500","RRULE:FREQ=DAILY;COUNT="+Math.max(1,c.left),"Prendre le fer et l’acide folique")}">Rappel quotidien à 8 h</a>${CPN.map(([w,t])=>{const dt=+L()+w*7*D;return`<a class="b" target="_blank" rel="noopener" href="${gl("Visite prénatale "+w+" SA",ymd(dt),ymd(dt+D),"",t)}">Visite ${w} SA</a>`}).join("")}</div>${V.cal()}`};
+const mine=m=>(m.from=="pro")==(PRO&&asPro);
+const th=()=>`<div>${msgs.map(m=>`<div class="bub ${mine(m)?"me":"bot"}"><small>${mine(m)?"Vous":E(m.from=="pro"?"Sage-femme":m.name||"Maman")}, ${tmf(m.t)}</small>\n${E(m.text)}</div>`).join("")||`<p class="mu">Aucun message pour l’instant.</p>`}</div><div class="row2"><input id="cin" placeholder="Votre message" aria-label="Votre message" onkeydown="if(event.key==='Enter')send()"><button onclick="send()">Envoyer</button></div>${cerr?`<div class="alert">${cerr}</div>`:""}`;
+V.cons=()=>{const pro=PRO&&asPro;if(!DB||(!pro&&!UID))return`<div class="card"><h2>Consultation en ligne</h2><p>Pour écrire à une sage-femme, ouvrez cette page avec votre compte, depuis le lien partagé par l’équipe de soin.</p></div>`;
+const sw=PRO?`<button class="g" onclick="asPro=!asPro;sel=null;msgs=[];cl=[];stop();started=false;render()">${pro?"Voir comme une maman":"Vue professionnelle"}</button>`:"";
+if(pro&&!sel)return`<div class="card"><h2>Consultations</h2>${sw}${cl.map(c=>`<div class="row" role="button" tabindex="0" onclick="openT('${E(c.id)}')" onkeydown="if(event.key==='Enter')openT('${E(c.id)}')"><span><b>${E(c.name)}</b>, ${c.w} SA ${c.rk?`<span class="badge">à surveiller</span>`:""}<br><span class="mu">${E(c.last)}</span></span><span class="mu">${tmf(c.ts)}</span></div>`).join("")||`<p class="mu">Aucune consultation pour l’instant.</p>`}</div>`;
+return`<div class="card"><h2>${pro?"Consultation":"Consulter une sage-femme"}</h2>${sw}${pro?`<button class="g" onclick="sel=null;msgs=[];startCons();render()">Retour</button>`:`<p class="mu">Vos messages sont visibles par vous et par l’équipe de soin. En cas d’urgence, allez directement à la maternité.</p><button class="g" onclick="send(sumTxt())">Joindre mon résumé</button>`}${th()}</div>`};
+function stop(){un.forEach(f=>f());un=[]}
+function watch(id){un.push(DB.doc("consults/"+id).collection("messages").orderBy("t").limit(200).onSnapshot(s=>{msgs=s.docs.map(d=>d.data());if(tab=="cons")render()},()=>{}))}
+function startCons(){stop();if(!DB)return;if(PRO&&asPro){un.push(DB.collection("consults").orderBy("ts","desc").limit(50).onSnapshot(s=>{cl=s.docs.map(d=>({id:d.id,...d.data()}));if(tab=="cons"&&!sel)render()},()=>{}));if(sel)watch(sel)}else if(UID)watch(UID)}
+function openT(id){sel=id;msgs=[];startCons();render()}
+async function send(txt){txt=typeof txt=="string"?txt:$("#cin").value.trim();const pro=PRO&&asPro,id=pro?sel:UID;if(!txt||!id||busy)return;busy=true;cerr="";try{const d=DB.doc("consults/"+id),nm=(S.p&&S.p.name)||"";if(pro)await d.update({last:txt.slice(0,120),ts:now(),from:"pro"});else await d.set({name:nm||"Maman",w:calc().w,rk:risks().length,last:txt.slice(0,120),ts:now(),from:"mama"});await d.collection("messages").add({from:pro?"pro":"mama",name:nm,text:txt,t:now()});if($("#cin"))$("#cin").value=""}catch(e){cerr="Message non envoyé. Votre accès doit être de niveau contributeur ou plus."}busy=false;render()}
+function render(){const ok=S.p?T.map(x=>x[0]):PRO?["cons","me"]:["me"];if(!ok.includes(tab))tab=ok[0];const iv=["#cin","#q"].map(s=>$(s)?$(s).value:null);
+if(tab=="cons"&&!started){started=true;startCons()}if(tab!="cons"&&started){stop();started=false;sel=null}
+$("#nav").innerHTML=T.filter(x=>ok.includes(x[0])).map(([k,l])=>`<button class="${k==tab?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${l}</button>`).join("");$("#app").innerHTML=V[tab]();["#cin","#q"].forEach((s,i)=>{if(iv[i]&&$(s))$(s).value=iv[i]});if(tab=="sos")sosRes()}
+async function boot(){try{const u=await claude.use("user");if(u){UID=await u.id();PRO=await u.canEdit()}}catch(e){}
+try{if(UID){const d=await claude.use("db");if(d){DB=d;const s=await d.doc("data/users/"+UID+"/state").get(),r=s.exists?s.data():null;if(r&&r.s&&(r.t||0)>(S.t||0)){Object.assign(S,r.s);try{localStorage.setItem("mc2",JSON.stringify(S))}catch(e){}}else if(S.p)save()}}}catch(e){}
+if(PRO&&!S.p)tab="cons";render()}
+</script>
+<script>
+let LG={step:1,phone:"",name:"",err:""},lastSig="",pollT=null;
+async function api(m,p,b){const r=await fetch(p,{method:m,headers:{"Content-Type":"application/json",...(TOK?{Authorization:"Bearer "+TOK}:{})},body:b?JSON.stringify(b):undefined});let j=null;try{j=await r.json()}catch(e){}
+if(r.status==401&&TOK&&!p.startsWith("/auth")){logout();throw new Error("Session expirée.")}
+if(!r.ok)throw new Error((j&&(j.details?j.details.join(" "):j.error))||"Erreur réseau");return j}
+function loginView(){$("#nav").innerHTML="";$("#app").innerHTML=`<div class="card"><h1>Mama Care</h1><p class="mu">Connectez-vous avec votre numéro de téléphone. Aucun mot de passe : un code vous est envoyé par SMS.</p>${LG.err?`<div class="alert">${E(LG.err)}</div>`:""}${LG.step==1?`<label for="lp">Numéro avec l’indicatif (ex. +229 97 00 00 00)</label><input id="lp" type="tel" inputmode="tel" autocomplete="tel" value="${E(LG.phone)}"><label for="ln">Prénom</label><input id="ln" autocomplete="given-name" value="${E(LG.name)}"><button onclick="lgReq()">Recevoir un code par SMS</button>`:`<p>Un code a été envoyé au ${E(LG.phone)}.</p><label for="lc">Code à 6 chiffres</label><input id="lc" inputmode="numeric" maxlength="6" autocomplete="one-time-code"><button onclick="lgVer()">Valider</button><button class="g" onclick="LG.step=1;LG.err='';render()">Changer de numéro</button>`}</div>`}
+async function lgReq(){LG.phone=$("#lp").value.trim();LG.name=$("#ln").value.trim();LG.err="";try{await api("POST","/auth/request",{phone:LG.phone});LG.step=2}catch(e){LG.err=e.message}render()}
+async function lgVer(){LG.err="";try{const j=await api("POST","/auth/verify",{phone:LG.phone,code:$("#lc").value.trim(),name:LG.name||undefined});TOK=j.token;USER=j.user;try{localStorage.setItem("mc_tok",TOK)}catch(e){}await enter()}catch(e){LG.err=e.message}render()}
+async function enter(){DB=true;PRO=USER.role=="pro"||USER.role=="admin";S={p:null,w:[],bp:[],k:[],c:[],cpn:{}};let c=null;try{c=JSON.parse(localStorage.getItem("mcs"+USER.id))}catch(e){}
+try{const j=await api("GET","/state");if(j.s&&(!c||(j.s.t||0)>=(c.t||0)))c=j.s}catch(e){}
+if(c)Object.assign(S,c);tab=PRO&&!S.p?"cons":"home"}
+function logout(){TOK=null;USER=null;DB=null;PRO=false;try{localStorage.removeItem("mc_tok")}catch(e){}stop();started=false;S={p:null,w:[],bp:[],k:[],c:[],cpn:{}};tab="home";LG={step:1,phone:"",name:"",err:""};render()}
+const render0=render;render=function(){if(!TOK)return loginView();render0()};
+async function boot(){try{TOK=localStorage.getItem("mc_tok")}catch(e){}
+if(TOK){try{USER=await api("GET","/me");await enter()}catch(e){TOK=null}}render()}
+const me0=V.me;V.me=()=>me0()+`<div class="card"><h3>Compte</h3><p>${E(USER.phone)}${USER.role!="mama"?" (professionnelle de santé)":""}</p><label class="chk"><input type="checkbox" ${USER.smsOptin?"checked":""} onchange="setSms(this.checked)">Recevoir mes rappels par SMS</label><button class="g" onclick="logout()">Se déconnecter</button></div>`;
+async function setSms(v){try{USER=await api("PATCH","/me",{smsOptin:v})}catch(e){}}
+async function ask(){const q=$("#q").value.trim();if(!q||busy)return;$("#q").value="";const n=norm(q),kb=KB.find(([re])=>re.test(n)),m={r:"bot",t:"…"},dg=/saign|convuls|perte de liquide|moins de mouvement/.test(n),h=chat.slice(-6);chat.push({r:"me",t:q},m);busy=true;render();$("#q").focus();
+try{const c=S.p?calc():null,j=await api("POST","/assistant",{question:q,history:h,context:c?`${c.w} SA, ${["1er","2e","3e"][c.tri]} trimestre. Facteurs de risque : ${risks().join(", ")||"aucun"}.`:undefined});m.t=j.text||(kb?kb[1]:FB)}catch(e){m.t=kb?kb[1]:FB}
+if(dg)m.t="Urgence possible : allez à la maternité sans attendre.\n"+m.t;busy=false;render()}
+V.cons=()=>{const pro=PRO&&asPro,sw=PRO?`<button class="g" onclick="asPro=!asPro;sel=null;msgs=[];cl=[];stop();started=false;render()">${pro?"Voir comme une maman":"Vue professionnelle"}</button>`:"";
+if(pro&&!sel)return`<div class="card"><h2>Consultations</h2>${sw}${cl.map(c=>`<div class="row" role="button" tabindex="0" onclick="openT(${c.id})" onkeydown="if(event.key==='Enter')openT(${c.id})"><span><b>${E(c.name||c.phone)}</b>${c.lastFrom=="mama"?` <span class="badge">à répondre</span>`:""}<br><span class="mu">${E(c.lastText)}</span></span><span class="mu">${tmf(c.lastAt)}</span></div>`).join("")||`<p class="mu">Aucune consultation pour l’instant.</p>`}</div>`;
+return`<div class="card"><h2>${pro?"Consultation":"Consulter une sage-femme"}</h2>${sw}${pro?`<button class="g" onclick="sel=null;msgs=[];startCons();render()">Retour</button>`:`<p class="mu">Vos messages sont visibles par vous et par l’équipe de soin. Vous recevrez un SMS quand une sage-femme répond. En cas d’urgence, allez directement à la maternité.</p><button class="g" onclick="send(sumTxt())">Joindre mon résumé</button>`}${th()}</div>`};
+async function pollCons(){if(!TOK)return;try{const pro=PRO&&asPro;let j;
+if(pro){cl=await api("GET","/threads");if(sel)j=await api("GET","/threads/"+sel+"/messages")}else j=await api("GET","/threads/me/messages");
+if(j){const nm=((cl.find(c=>c.id==sel)||{}).name)||"";msgs=j.messages.map(x=>({from:x.fromRole,text:x.text,t:x.createdAt,name:nm}))}
+const sig=JSON.stringify([cl,msgs]);if(sig!=lastSig){lastSig=sig;if(tab=="cons")render()}}catch(e){}}
+function startCons(){stop();lastSig="";pollCons();const t=setInterval(pollCons,7000);un=[()=>clearInterval(t)]}
+async function send(txt){txt=typeof txt=="string"?txt:$("#cin").value.trim();const pro=PRO&&asPro,id=pro?sel:"me";if(!txt||!id||busy)return;busy=true;cerr="";
+try{await api("POST","/threads/"+id+"/messages",{text:txt});if($("#cin"))$("#cin").value="";lastSig="";await pollCons()}catch(e){cerr=E(e.message)}busy=false;render()}
+boot();
+</script></body></html>
