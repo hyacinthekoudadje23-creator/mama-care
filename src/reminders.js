@@ -1,5 +1,5 @@
 import db from "./db.js";
-import { sendSms } from "./sms.js";
+import { notify } from "./notify.js";
 
 const CPN = [12, 20, 26, 30, 34, 36, 38, 40]; // 8 contacts recommandés par l'OMS
 const H = 3600e3, D = 24 * H;
@@ -26,11 +26,11 @@ export function startScheduler() {
   const tick = async () => {
     const now = Date.now();
     db.prepare("UPDATE reminders SET sent_at=-1 WHERE sent_at IS NULL AND due_at<?").run(now - D); // trop en retard : abandonné
-    const rows = db.prepare(`SELECT r.id, r.text, u.phone, u.sms_optin o FROM reminders r JOIN users u ON u.id=r.user_id
+    const rows = db.prepare(`SELECT r.id, r.text, u.phone, u.email, u.sms_optin o FROM reminders r JOIN users u ON u.id=r.user_id
       WHERE r.sent_at IS NULL AND r.due_at<=? ORDER BY r.due_at LIMIT 50`).all(now);
     for (const r of rows) {
       if (!r.o) { db.prepare("UPDATE reminders SET sent_at=-1 WHERE id=?").run(r.id); continue; }
-      try { await sendSms(r.phone, r.text); db.prepare("UPDATE reminders SET sent_at=? WHERE id=?").run(Date.now(), r.id); }
+      try { await notify(r, "Mama Care : rappel", r.text); db.prepare("UPDATE reminders SET sent_at=? WHERE id=?").run(Date.now(), r.id); }
       catch (e) { console.error("Rappel", r.id, e.message); }
     }
   };

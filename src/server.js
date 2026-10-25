@@ -8,11 +8,14 @@ import { z } from "zod";
 import { fileURLToPath } from "node:url";
 import db from "./db.js";
 import { sendSms } from "./sms.js";
+import { sendEmail } from "./email.js";
+import { notify } from "./notify.js";
 import { rebuild, startScheduler } from "./reminders.js";
 
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET || SECRET.length < 24) { console.error("JWT_SECRET (24 caractères minimum) est obligatoire."); process.exit(1); }
 const ADMINS = (process.env.ADMIN_PHONES || "").split(",").map((s) => s.trim()).filter(Boolean);
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 const OTP_TTL = 5 * 60e3, now = () => Date.now();
 
 const app = express();
@@ -34,38 +37,45 @@ const phoneSchema = z.string()
   .transform((s) => { s = s.replace(/[\s().-]/g, ""); return s.startsWith("00") ? "+" + s.slice(2) : s; })
   .pipe(z.string().regex(/^\+[1-9]\d{7,14}$/, "Numéro au format international, ex. +22997000000"));
 const hash = (p, c) => crypto.createHmac("sha256", SECRET).update(p + ":" + c).digest("hex");
-const pub = (u) => ({ id: u.id, phone: u.phone, name: u.name, role: u.role, smsOptin: !!u.sms_optin });
+const pub = (u) => ({ id: u.id, email: u.email, phone: u.phone && u.phone.startsWith("e:") ? null : u.phone, name: u.name, role: u.role, smsOptin: !!u.sms_optin });
 const userById = (id) => db.prepare("SELECT * FROM users WHERE id=?").get(id);
 
 // ---------- Comptes : connexion par numéro de téléphone + code SMS ----------
 app.get("/health", (q, r) => r.json({ ok: true }));
 
+const idBase = z.object({ phone: phoneSchema.optional(), email: z.string().trim().toLowerCase().email().max(120).optional() });
+const oneId = [(b) => !!b.phone !== !!b.email, "Indiquez une adresse e-mail ou un numéro de téléphone."];
+const idSchema = idBase.refine(...oneId);
+const verifySchema = idBase.extend({ code: z.string().regex(/^\d{6}$/), name: z.string().trim().max(60).optional() }).refine(...oneId);
+
 app.post("/auth/request", lim(10, 15), wrap(async (req, res) => {
-  const { phone } = z.object({ phone: phoneSchema }).parse(req.body);
-  const o = db.prepare("SELECT expires_at FROM otps WHERE phone=?").get(phone);
+  const b = idSchema.parse(req.body), id = b.email || b.phone;
+  const o = db.prepare("SELECT expires_at FROM otps WHERE phone=?").get(id);
   if (o && o.expires_at - OTP_TTL > now() - 60e3) return res.status(429).json({ error: "Attendez une minute avant de redemander un code." });
   const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
   db.prepare(`INSERT INTO otps(phone,hash,expires_at,attempts) VALUES(?,?,?,0)
-    ON CONFLICT(phone) DO UPDATE SET hash=excluded.hash, expires_at=excluded.expires_at, attempts=0`).run(phone, hash(phone, code), now() + OTP_TTL);
-  await sendSms(phone, `Mama Care: votre code est ${code}. Il expire dans 5 minutes.`);
+    ON CONFLICT(phone) DO UPDATE SET hash=excluded.hash, expires_at=excluded.expires_at, attempts=0`).run(id, hash(id, code), now() + OTP_TTL);
+  if (b.email) await sendEmail(b.email, "Votre code Mama Care", `Votre code Mama Care est ${code}. Il expire dans 5 minutes.\nSi vous n’avez pas demandé ce code, ignorez ce message.`);
+  else await sendSms(b.phone, `Mama Care: votre code est ${code}. Il expire dans 5 minutes.`);
   res.json({ ok: true });
 }));
 
 app.post("/auth/verify", lim(20, 15), wrap((req, res) => {
-  const b = z.object({ phone: phoneSchema, code: z.string().regex(/^\d{6}$/), name: z.string().trim().max(60).optional() }).parse(req.body);
-  const o = db.prepare("SELECT * FROM otps WHERE phone=?").get(b.phone);
+  const b = verifySchema.parse(req.body), id = b.email || b.phone;
+  const o = db.prepare("SELECT * FROM otps WHERE phone=?").get(id);
   if (!o || o.expires_at < now() || o.attempts >= 5) return res.status(401).json({ error: "Code expiré ou trop d’essais. Demandez un nouveau code." });
-  if (!crypto.timingSafeEqual(Buffer.from(o.hash), Buffer.from(hash(b.phone, b.code)))) {
-    db.prepare("UPDATE otps SET attempts=attempts+1 WHERE phone=?").run(b.phone);
+  if (!crypto.timingSafeEqual(Buffer.from(o.hash), Buffer.from(hash(id, b.code)))) {
+    db.prepare("UPDATE otps SET attempts=attempts+1 WHERE phone=?").run(id);
     return res.status(401).json({ error: "Code incorrect." });
   }
-  db.prepare("DELETE FROM otps WHERE phone=?").run(b.phone);
-  let u = db.prepare("SELECT * FROM users WHERE phone=?").get(b.phone);
+  db.prepare("DELETE FROM otps WHERE phone=?").run(id);
+  const admin = b.email ? ADMIN_EMAILS.includes(b.email) : ADMINS.includes(b.phone);
+  let u = db.prepare(b.email ? "SELECT * FROM users WHERE email=?" : "SELECT * FROM users WHERE phone=?").get(id);
   if (!u) {
-    const id = db.prepare("INSERT INTO users(phone,name,role,created_at) VALUES(?,?,?,?)")
-      .run(b.phone, b.name || null, ADMINS.includes(b.phone) ? "admin" : "mama", now()).lastInsertRowid;
-    u = userById(id);
-  } else if (ADMINS.includes(b.phone) && u.role !== "admin") {
+    const uid = db.prepare("INSERT INTO users(phone,email,name,role,created_at) VALUES(?,?,?,?,?)")
+      .run(b.email ? "e:" + b.email : b.phone, b.email || null, b.name || null, admin ? "admin" : "mama", now()).lastInsertRowid;
+    u = userById(uid);
+  } else if (admin && u.role !== "admin") {
     db.prepare("UPDATE users SET role='admin' WHERE id=?").run(u.id); u.role = "admin";
   }
   res.json({ token: jwt.sign({ sub: u.id }, SECRET, { expiresIn: "30d" }), user: pub(u) });
@@ -118,7 +128,7 @@ function access(req, res) {
   return t;
 }
 app.get("/threads", auth, need(isPro), (req, res) => res.json(db.prepare(`
-  SELECT t.id, t.last_text lastText, t.last_at lastAt, t.last_from lastFrom, u.name, u.phone
+  SELECT t.id, t.last_text lastText, t.last_at lastAt, t.last_from lastFrom, u.name, COALESCE(u.email, u.phone) phone
   FROM threads t JOIN users u ON u.id=t.mama_id WHERE t.last_at IS NOT NULL ORDER BY t.last_at DESC LIMIT 100`).all()));
 app.get("/threads/:id/messages", auth, (req, res) => {
   const t = access(req, res); if (!t) return;
@@ -136,7 +146,7 @@ app.post("/threads/:id/messages", auth, lim(30, 1), wrap(async (req, res) => {
   })();
   if (from === "pro") { // prévenir la maman par SMS
     const m = userById(t.mama_id);
-    if (m && m.sms_optin) sendSms(m.phone, "Mama Care: votre sage-femme vous a répondu. Ouvrez l'application pour lire le message.").catch((e) => console.error("SMS réponse", e.message));
+    if (m && m.sms_optin) notify(m, "Mama Care : nouvelle réponse", "Votre sage-femme vous a répondu. Ouvrez l’application pour lire le message.").catch((e) => console.error("Notification", e.message));
   }
   res.status(201).json({ id });
 }));
@@ -159,7 +169,7 @@ app.post("/assistant", auth, lim(20, 1), wrap(async (req, res) => {
 
 // ---------- Administration : nommer les professionnelles de santé ----------
 app.get("/admin/users", auth, need((u) => u.role === "admin"), (req, res) =>
-  res.json(db.prepare("SELECT id, phone, name, role FROM users ORDER BY id DESC LIMIT 200").all()));
+  res.json(db.prepare("SELECT id, COALESCE(email, phone) phone, name, role FROM users ORDER BY id DESC LIMIT 200").all()));
 app.patch("/admin/users/:id/role", auth, need((u) => u.role === "admin"), wrap((req, res) => {
   const { role } = z.object({ role: z.enum(["mama", "pro"]) }).parse(req.body);
   res.json({ ok: db.prepare("UPDATE users SET role=? WHERE id=? AND role!='admin'").run(role, +req.params.id).changes > 0 });

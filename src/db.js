@@ -25,4 +25,7 @@ CREATE TABLE IF NOT EXISTS reminders(
 CREATE INDEX IF NOT EXISTS rem_due ON reminders(sent_at, due_at);
 `);
 
+if (!db.prepare("PRAGMA table_info(users)").all().some((c) => c.name === "email")) db.exec("ALTER TABLE users ADD COLUMN email TEXT");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email) WHERE email IS NOT NULL");
+
 export default db;
