@@ -36,7 +36,14 @@ nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--sf);bor
 nav button{flex:1;margin:0;background:none;color:var(--mu);border-radius:0;padding:14px 1px;font-size:11px}
 nav button.on{color:var(--pr);box-shadow:inset 0 3px var(--pr)}
 a.b{display:inline-block;margin:6px 6px 0 0;padding:9px 13px;border:1px solid var(--pr);border-radius:10px;color:var(--pr);font-weight:600;text-decoration:none;font-size:15px}.bub{white-space:pre-wrap}.bub small{opacity:.8}.row[role=button]{cursor:pointer}
-</style></head>
+</style><link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0F5C4D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mama Care">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script>if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}))</script>
+</head>
 <body><main id="app"></main><nav id="nav"></nav>
 <script>
 const $=s=>document.querySelector(s),D=864e5,now=()=>Date.now();
