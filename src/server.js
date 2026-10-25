@@ -4,18 +4,23 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { z } from "zod";
 import { fileURLToPath } from "node:url";
 import db from "./db.js";
 import { sendSms } from "./sms.js";
 import { sendEmail } from "./email.js";
 import { notify } from "./notify.js";
+import { startBackups } from "./backup.js";
 import { rebuild, startScheduler } from "./reminders.js";
 
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET || SECRET.length < 24) { console.error("JWT_SECRET (24 caractères minimum) est obligatoire."); process.exit(1); }
 const ADMINS = (process.env.ADMIN_PHONES || "").split(",").map((s) => s.trim()).filter(Boolean);
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const CONSENT_VERSION = "2026-10-25"; // à changer quand le texte de consentement change : tout le monde devra le ré-accepter
 const OTP_TTL = 5 * 60e3, now = () => Date.now();
 
 const app = express();
@@ -37,11 +42,12 @@ const phoneSchema = z.string()
   .transform((s) => { s = s.replace(/[\s().-]/g, ""); return s.startsWith("00") ? "+" + s.slice(2) : s; })
   .pipe(z.string().regex(/^\+[1-9]\d{7,14}$/, "Numéro au format international, ex. +22997000000"));
 const hash = (p, c) => crypto.createHmac("sha256", SECRET).update(p + ":" + c).digest("hex");
-const pub = (u) => ({ id: u.id, email: u.email, phone: u.phone && u.phone.startsWith("e:") ? null : u.phone, name: u.name, role: u.role, smsOptin: !!u.sms_optin });
+const pub = (u) => ({ id: u.id, email: u.email, phone: u.phone && u.phone.startsWith("e:") ? null : u.phone, consentVersion: u.consent_version || null, name: u.name, role: u.role, smsOptin: !!u.sms_optin });
 const userById = (id) => db.prepare("SELECT * FROM users WHERE id=?").get(id);
 
 // ---------- Comptes : connexion par numéro de téléphone + code SMS ----------
 app.get("/health", (q, r) => r.json({ ok: true }));
+app.get("/config", (q, r) => r.json({ contact: process.env.CONTACT_EMAIL || "", consentVersion: CONSENT_VERSION }));
 
 const idBase = z.object({ phone: phoneSchema.optional(), email: z.string().trim().toLowerCase().email().max(120).optional() });
 const oneId = [(b) => !!b.phone !== !!b.email, "Indiquez une adresse e-mail ou un numéro de téléphone."];
@@ -97,6 +103,26 @@ app.patch("/me", auth, wrap((req, res) => {
   db.prepare("UPDATE users SET name=COALESCE(?,name), sms_optin=COALESCE(?,sms_optin) WHERE id=?")
     .run(b.name ?? null, b.smsOptin === undefined ? null : +b.smsOptin, req.user.id);
   res.json(pub(userById(req.user.id)));
+}));
+
+// ---------- Consentement, export et suppression des données ----------
+app.post("/me/consent", auth, wrap((req, res) => {
+  z.object({ accept: z.literal(true) }).parse(req.body);
+  db.prepare("UPDATE users SET consent_version=?, consent_at=? WHERE id=?").run(CONSENT_VERSION, now(), req.user.id);
+  res.json(pub(userById(req.user.id)));
+}));
+app.get("/me/export", auth, (req, res) => {
+  const u = req.user, s = db.prepare("SELECT data FROM profiles WHERE user_id=?").get(u.id);
+  const t = db.prepare("SELECT id FROM threads WHERE mama_id=?").get(u.id);
+  const messages = t ? db.prepare("SELECT from_role fromRole, text, created_at createdAt FROM messages WHERE thread_id=? ORDER BY id").all(t.id) : [];
+  res.setHeader("Content-Disposition", 'attachment; filename="mama-care-mes-donnees.json"');
+  res.json({ exportedAt: new Date().toISOString(), account: pub(u), consentAt: u.consent_at, pregnancyData: s ? JSON.parse(s.data) : null, messages });
+});
+app.delete("/me", auth, wrap((req, res) => {
+  const u = req.user;
+  if (u.role !== "mama") return res.status(403).json({ error: "Un compte professionnel se supprime en contactant l’administrateur." });
+  db.transaction(() => { db.prepare("DELETE FROM otps WHERE phone=?").run(u.email || u.phone); db.prepare("DELETE FROM users WHERE id=?").run(u.id); })();
+  res.json({ ok: true });
 }));
 
 // ---------- Suivi de grossesse (même objet S que l'application) + rappels SMS ----------
@@ -175,10 +201,17 @@ app.patch("/admin/users/:id/role", auth, need((u) => u.role === "admin"), wrap((
   res.json({ ok: db.prepare("UPDATE users SET role=? WHERE id=? AND role!='admin'").run(role, +req.params.id).changes > 0 });
 }));
 
+app.get("/admin/backup", auth, need((u) => u.role === "admin"), wrap(async (req, res) => {
+  const f = path.join(os.tmpdir(), `mamacare-${Date.now()}.db`);
+  await db.backup(f);
+  res.download(f, `mama-care-sauvegarde-${new Date().toISOString().slice(0, 10)}.db`, () => fs.unlink(f, () => {}));
+}));
+
 app.use((e, req, res, next) => {
   if (e instanceof z.ZodError) return res.status(400).json({ error: "Données invalides.", details: e.issues.map((i) => i.path.join(".") + " : " + i.message) });
   console.error(e); res.status(500).json({ error: "Erreur serveur." });
 });
 
 startScheduler();
+startBackups();
 app.listen(process.env.PORT || 3000, () => console.log("Mama Care API prête"));
