@@ -34,7 +34,7 @@ app.use(
   cors({ origin: (process.env.CORS_ORIGIN || "").split(",").filter(Boolean) }),
   express.json({ limit: "300kb" }),
 );
-app.use(express.static(fileURLToPath(new URL("../public", import.meta.url)))); // l'application web (même adresse que l'API)
+app.use(express.static(fileURLToPath(new URL("../public", import.meta.url)), { extensions: ["html"] })); // l'application web (même adresse que l'API)
 
 const wrap = (f) => (req, res, next) => Promise.resolve(f(req, res, next)).catch(next);
 const lim = (max, min) => rateLimit({ windowMs: min * 60e3, max, standardHeaders: true, legacyHeaders: false });
